@@ -32,6 +32,10 @@ StopWordSet = {'ourselves', 'hers', 'between', 'yourself', 'but', 'again',
 #   CLASS
 ##########################################################################
 
+class TokenizerOption(object):
+    NONE = 0
+    REMOVE_STOP_WORDS = 1 << 0
+
 class Tokenizer(object):
 
     @staticmethod

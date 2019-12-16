@@ -7,14 +7,17 @@
 import sys
 from optparse import OptionParser
 
-from textprocessor.Tokenizer import Tokenizer
-from textprocessor.Normalizer import Normalizer
+from textprocessor.TextProcessor import TextProcessor
+from textprocessor.Tokenizer import TokenizerOption
+from textprocessor.Normalizer import NormalizerOption
 
 ##########################################################################
 #   GLOBAL
 ##########################################################################
 
 NumRequiredArgs = 0
+
+TextFileDir = '../dataset/Gutenberg/txt'
 
 ##########################################################################
 #   HELPER
@@ -39,16 +42,15 @@ def main():
         parser.error('Incorrect number of arguments')
         sys.exit(-1)
 
-    #   Define a sample text
-    text = 'This is a red book.'
+    #   Construct text processor
+    textProcessor = TextProcessor( TextFileDir,
+                                    tokenizerOption=TokenizerOption.REMOVE_STOP_WORDS,
+                                    normalizerOption=NormalizerOption.REMOVE_PUNCTUATION | NormalizerOption.CASE_FOLDING )
 
-    #   Do tokenize
-    tokenList = Tokenizer.tokenize( text )
-
-    #   Do normalize
-    tokenList = Normalizer.normalizeTokenList( tokenList )
-
-    print(tokenList)
+    #   Construct intermediate index
+    intermediateIndex = textProcessor.constructIntermediateIndex()
+    
+    print(intermediateIndex)
 
 ##########################################################################
 #   RUN

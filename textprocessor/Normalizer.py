@@ -23,6 +23,11 @@ PunctuationCharPattern = r"""!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~"""
 class EmptyStringException(Exception):
     pass
 
+class NormalizerOption(object):
+    NONE = 0
+    REMOVE_PUNCTUATION = 1 << 0
+    CASE_FOLDING = 1 << 1
+
 class Normalizer(object):
 
     @staticmethod
