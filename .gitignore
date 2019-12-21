@@ -1,3 +1,5 @@
 *.pyc
+intermediate_index
 index
+backup
 __pycache__

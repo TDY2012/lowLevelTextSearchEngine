@@ -11,6 +11,8 @@ from textprocessor.TextProcessor import TextProcessor
 from textprocessor.Tokenizer import TokenizerOption
 from textprocessor.Normalizer import NormalizerOption
 
+from indexer.Indexer import Indexer
+
 ##########################################################################
 #   GLOBAL
 ##########################################################################
@@ -48,7 +50,17 @@ def main():
                                     normalizerOption=NormalizerOption.REMOVE_PUNCTUATION | NormalizerOption.CASE_FOLDING )
 
     #   Construct intermediate index
-    textProcessor.writeIntermediateIndex('index')
+    #textProcessor.writeIntermediateIndex('intermediate_index')
+
+    numDoc = len( textProcessor.textFileNameList )
+
+    indexer = Indexer()
+
+    indexer.readFromIntermediateIndexDir( 'intermediate_index' )
+
+    indexer.convertIndexToTfIdf( numDoc )
+
+    indexer.writeIndex( 'index', 'index.txt' )
 
 ##########################################################################
 #   RUN

@@ -18,7 +18,7 @@ from .Normalizer import Normalizer, NormalizerOption
 
 TextFileNamePattern = '(.+)\.txt'
 
-IndexFileNameFormat = 'index_{id}.txt'
+IntermediateIndexFileNameFormat = 'intermediate_index_{id}.txt'
 
 NumProcess = 8
 
@@ -72,15 +72,17 @@ class TextProcessor(object):
         #   For test
         #self.textFileNameList = self.textFileNameList[0:10]
 
-    def writeIntermediateIndex( self, indexFileDir, indexFileNameFormat=IndexFileNameFormat, numProcess=NumProcess ):
+    def writeIntermediateIndex( self, intermediateIndexDir : str,
+                                        intermediateIndexFileNameFormat : Optional[str] = IntermediateIndexFileNameFormat,
+                                        numProcess : Optional[int] = NumProcess ):
         ''' This function writes intermediate indices to index file directory
             with specified name format by splitting current text file name list into
             chunks and multiprocessing them
         '''
 
-        #   Check if index file directory exists
-        if not os.path.exists(indexFileDir):
-            raise ValueError('writeIntermediateIndex() - No directory at {}.'.format(indexFileDir))
+        #   Check if intermediate index file directory exists
+        if not os.path.exists(intermediateIndexDir):
+            raise ValueError('writeIntermediateIndex() - No directory at {}.'.format(intermediateIndexDir))
         
         #   Inititalize multiprocessing objects
         manager = multiprocessing.Manager()
@@ -114,7 +116,7 @@ class TextProcessor(object):
 
         #   Write result into intermediate index file at given directory
         for i, result in enumerate(resultList):
-            with open( os.path.join( indexFileDir, indexFileNameFormat.format(**{'id':i}) ), 'w', encoding='utf-8' ) as indexFile:
+            with open( os.path.join( intermediateIndexDir, intermediateIndexFileNameFormat.format(**{'id':i}) ), 'w', encoding='utf-8' ) as indexFile:
                 indexFile.write( repr(result) )
 
     def constructIntermediateIndex( self, textFileNameList, outputQueue, processId=0 ):
