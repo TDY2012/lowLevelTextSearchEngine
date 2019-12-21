@@ -47,6 +47,7 @@ class Indexer(object):
 
     def __init__(self):
         self.index = None
+        self.invertedIndex = None
 
     def readFromIntermediateIndexDir( self, intermediateIndexDir : str, intermediateIndexFileNameFormat : Optional[str] = IntermediateIndexFileNameFormat ):
         ''' This function reads intermediate index from given directory and file name format then
@@ -115,6 +116,20 @@ class Indexer(object):
             for docId, termFreq in docIdToTermFreqDict.items():
                 self.index[term][docId] = math.log10( 1 + termFreq )*math.log10( docFreq )
 
+    def constructInvertedIndexTfIdf( self, numDoc : int ):
+        ''' This function constructs inverted index of the index
+        '''
+
+        assert( self.index != None )
+
+        self.invertedIndex = { docId : dict() for docId in range(numDoc) }
+
+        for term, docIdToWeightedTfIdfDict in self.index.items():
+
+            for docId, weightedTfIdf in docIdToWeightedTfIdfDict.items():
+
+                self.invertedIndex[docId][term] = weightedTfIdf
+
     def writeIndex( self, indexDir : str, indexFileName : str ):
         ''' This function writes index file at given path
         '''
@@ -127,3 +142,16 @@ class Indexer(object):
         #   Write index file
         with open( indexFilePath, 'w', encoding='utf-8' ) as indexFile:
             indexFile.write( repr(self.index) )
+
+    def writeInvertedIndex( self, invertedIndexDir : str, invertedIndexFileName : str ):
+        ''' This function writes inverted index file at given path
+        '''
+
+        assert( self.invertedIndex != None )
+
+        #   Construct inverted index file path
+        invertedIndexFilePath = os.path.join( invertedIndexDir, invertedIndexFileName )
+
+        #   Write index file
+        with open( invertedIndexFilePath, 'w', encoding='utf-8' ) as invertedIndexFile:
+            invertedIndexFile.write( repr(self.invertedIndex) )
