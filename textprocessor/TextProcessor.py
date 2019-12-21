@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 ##########################################################################
 #   IMPORT
 ##########################################################################
@@ -5,6 +6,8 @@
 import os
 import re
 from typing import Optional
+import multiprocessing
+import time
 
 from .Tokenizer import Tokenizer, TokenizerOption
 from .Normalizer import Normalizer, NormalizerOption
@@ -15,9 +18,16 @@ from .Normalizer import Normalizer, NormalizerOption
 
 TextFileNamePattern = '(.+)\.txt'
 
+IndexFileNameFormat = 'index_{id}.txt'
+
+NumProcess = 8
+
 ##########################################################################
 #   HELPER
 ##########################################################################
+
+def chunkify( l, n ):
+    return [ [ l[i] for i in range(j*(len(l)//n),(j+1)*(len(l)//n)) ] for j in range(n-1) ] + [ l[ (n-1)*(len(l)//n): ] ]
 
 ##########################################################################
 #   CLASS
@@ -60,9 +70,54 @@ class TextProcessor(object):
         self.textFileNameList = validTextFileNameList
 
         #   For test
-        self.textFileNameList = self.textFileNameList[0:10]
+        #self.textFileNameList = self.textFileNameList[0:10]
 
-    def constructIntermediateIndex( self ):
+    def writeIntermediateIndex( self, indexFileDir, indexFileNameFormat=IndexFileNameFormat, numProcess=NumProcess ):
+        ''' This function writes intermediate indices to index file directory
+            with specified name format by splitting current text file name list into
+            chunks and multiprocessing them
+        '''
+
+        #   Check if index file directory exists
+        if not os.path.exists(indexFileDir):
+            raise ValueError('writeIntermediateIndex() - No directory at {}.'.format(indexFileDir))
+        
+        #   Inititalize multiprocessing objects
+        manager = multiprocessing.Manager()
+        outputQueue = manager.Queue()
+
+        #   Split text file name list into small chunks by number of processes
+        textFileNameListChunk = chunkify( self.textFileNameList, numProcess )
+
+        #   Begin timer
+        startTime = time.time()
+
+        #   Construct processes to construct intermediate index
+        processList = [ multiprocessing.Process( target=self.constructIntermediateIndex, args=( textFileNameList, outputQueue, i ) ) for i, textFileNameList in enumerate(textFileNameListChunk) ]
+
+        #   Start process
+        for process in processList:
+            process.start()
+
+        #   Join process
+        for process in processList:
+            process.join()
+
+        #   Get result from output queue
+        resultList = [ outputQueue.get() for process in processList ]
+
+        #   Stop timer
+        deltaTime = time.time() - startTime
+
+        #   Log timer message
+        print('writeIntermediateIndex() - Index time = {} seconds.'.format(deltaTime))
+
+        #   Write result into intermediate index file at given directory
+        for i, result in enumerate(resultList):
+            with open( os.path.join( indexFileDir, indexFileNameFormat.format(**{'id':i}) ), 'w', encoding='utf-8' ) as indexFile:
+                indexFile.write( repr(result) )
+
+    def constructIntermediateIndex( self, textFileNameList, outputQueue, processId=0 ):
         ''' This function constructs an intermediated index which represents
             a term to document id to term frequency mapping dictionary.
             The index should be in this following format:
@@ -81,17 +136,20 @@ class TextProcessor(object):
                 }
         '''
 
-        assert( self.textFileNameList != None )
-
         #   Initialize term to document id to term frequency mapping dictionary
         #   NOTE - document id is indexed by validated text file name list
         termToDocIdToTermFrequencyDict = dict()
 
+        #   Get number of text file name list
+        numTextFileNameList = len(textFileNameList)
+
         #   For each docId, textFileName enumerate( textFileNameList )
-        for docId, textFileName in enumerate( self.textFileNameList ):
+        for docId, textFileName in enumerate( textFileNameList ):
+
+            print('[{}] Now processing {}. ({}/{})'.format(processId, textFileName, docId+1, numTextFileNameList))
 
             #   Open text file from text file directory
-            with open( os.path.join( self.textFileDir, textFileName ) ) as textFile:
+            with open( os.path.join( self.textFileDir, textFileName ), encoding='utf-8' ) as textFile:
                 
                 #   Read text from file
                 text = textFile.read()
@@ -112,4 +170,6 @@ class TextProcessor(object):
                 #   Assign document id and term frequency
                 termToDocIdToTermFrequencyDict[token][docId] = tokenList.count(token)
 
-        return termToDocIdToTermFrequencyDict
+            print('[{}] Done processing {}. ({}/{})'.format(processId, textFileName, docId+1, numTextFileNameList))
+
+        outputQueue.put( termToDocIdToTermFrequencyDict )

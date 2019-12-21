@@ -48,9 +48,7 @@ def main():
                                     normalizerOption=NormalizerOption.REMOVE_PUNCTUATION | NormalizerOption.CASE_FOLDING )
 
     #   Construct intermediate index
-    intermediateIndex = textProcessor.constructIntermediateIndex()
-    
-    print(intermediateIndex)
+    textProcessor.writeIntermediateIndex('index')
 
 ##########################################################################
 #   RUN
