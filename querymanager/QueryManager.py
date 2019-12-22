@@ -50,18 +50,23 @@ class QueryManager(object):
         self.normalizerOption = normalizerOption
 
     def query( self, queryStr : str ):
+        ''' This function queries string from loaded index
+        '''
 
         assert(self.indexer != None)
 
+        #   Preprocess query string
         queryTermList = Tokenizer.tokenize( queryStr, isRemoveStopWord=self.tokenizerOption & TokenizerOption.REMOVE_STOP_WORDS )
-
         queryTermList = Normalizer.normalizeTokenList( queryTermList, isRemovePunctuation=self.normalizerOption & NormalizerOption.REMOVE_PUNCTUATION,
                                                                         isCaseFolding=self.normalizerOption & NormalizerOption.CASE_FOLDING )
 
+        #   Construct query vector
         queryVector = constructQueryVector( queryTermList )
 
+        #   Compute cosine similarity with all document vectors
         docIdToConsineSimilarityTupleList = [ (docId, computeCosineSimilarity( queryVector, self.indexer.invertedIndex[docId] )) for docId in self.indexer.invertedIndex.keys() ]
 
+        #   Sort result by cosine similarity
         docIdToConsineSimilarityTupleList.sort( key=lambda x: x[1], reverse=True )
 
         return docIdToConsineSimilarityTupleList

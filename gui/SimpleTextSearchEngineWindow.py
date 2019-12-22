@@ -28,24 +28,16 @@ WindowTitle = 'Simple Text Search Engine'
 #   HELPER
 ##########################################################################
 
-def logResult( queryManger, resultObj ):
+def logResult( queryManger, docIdToCosineSimilaryTupleList ):
     ''' This function logs out formatted results in terminal
     '''
 
     #   If there is no matching
-    if resultObj.is_empty():
+    if len(docIdToCosineSimilaryTupleList) == 0:
         print('No matched result.')
         return
 
-    #   Get result field dictionary list
-    fieldDictList = queryManger.getResultFieldDictList( resultObj )
-
-    #   Dispaly results
-    for i, fieldDict in enumerate( fieldDictList, 1 ):
-        
-        #   Display log message
-        print('No {}.'.format(i))
-        print('[Author] : {author}\n[Title] : {title}\n'.format(**fieldDict))
+    print(docIdToCosineSimilaryTupleList)
 
 ##########################################################################
 #   CLASS

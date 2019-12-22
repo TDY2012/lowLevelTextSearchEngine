@@ -55,24 +55,29 @@ def main():
 
     #   Check if docId index directory exists
     if not os.path.exists( docIdIndexFilePath ):
-        print('search_index_dir - Cannot find docId index at {}.'.format(docIdIndexFilePath))
+        print('simple_text_search_engine - Cannot find docId index at {}.'.format(docIdIndexFilePath))
         sys.exit(-1)
 
     invertedIndexFilePath = os.path.join( IndexDir, InvertedIndexFileName )
 
     #   Check if inverted index directory exists
     if not os.path.exists( invertedIndexFilePath ):
-        print('search_index_dir - Cannot find inverted index at {}.'.format(invertedIndexFilePath))
+        print('simple_text_search_engine - Cannot find inverted index at {}.'.format(invertedIndexFilePath))
         sys.exit(-1)
 
+    #   Construct pyqt application
     app = QtWidgets.QApplication([])
 
-    mainWindow = SimpleTextSearchEngineWindow( isDebug )
+    #   Construct simple text search engine window
+    simpleTextSearchEngineWindow = SimpleTextSearchEngineWindow( isDebug )
 
-    mainWindow.loadIndexDir( IndexDir, DocIdIndexFileName, InvertedIndexFileName )
+    #   Load indices
+    simpleTextSearchEngineWindow.loadIndexDir( IndexDir, DocIdIndexFileName, InvertedIndexFileName )
 
-    mainWindow.show()
+    #   Show window
+    simpleTextSearchEngineWindow.show()
 
+    #   Exit application
     sys.exit(app.exec())
 
 ##########################################################################
