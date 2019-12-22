@@ -44,6 +44,11 @@ def main():
 
     parser = OptionParser(usage='usage: %prog [options]',
                             version='%prog 0.0')
+    parser.add_option( '--textDir',
+                        action='store',
+                        dest='textDir',
+                        default=TextFileDir,
+                        help='text file directory (default = {!r})'.format(TextFileDir) )
 
     (options, args) = parser.parse_args()
 
@@ -51,8 +56,11 @@ def main():
         parser.error('Incorrect number of arguments')
         sys.exit(-1)
 
+    #   Parse options
+    textDir = options.textDir
+
     #   Construct text processor
-    textProcessor = TextProcessor( TextFileDir,
+    textProcessor = TextProcessor( textDir,
                                     tokenizerOption=TokenizerOption.REMOVE_STOP_WORDS,
                                     normalizerOption=NormalizerOption.REMOVE_PUNCTUATION | NormalizerOption.CASE_FOLDING )
 
