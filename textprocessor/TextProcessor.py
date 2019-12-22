@@ -5,6 +5,7 @@
 
 import os
 import re
+import pickle
 from typing import Optional
 import multiprocessing
 import time
@@ -27,7 +28,7 @@ NumProcess = 8
 ##########################################################################
 
 def chunkify( l, n ):
-    return (len(l)//n), [ [ l[i] for i in range(j*(len(l)//n),(j+1)*(len(l)//n)) ] for j in range(n-1) ] + [ l[ (n-1)*(len(l)//n): ] ]
+    return [ [ l[i] for i in range(j*(len(l)//n),(j+1)*(len(l)//n)) ] for j in range(n-1) ] + [ l[ (n-1)*(len(l)//n): ] ]
 
 ##########################################################################
 #   CLASS
@@ -66,11 +67,29 @@ class TextProcessor(object):
         #   Validate text file name with text file name pattern
         validTextFileNameList = [ fileName for fileName in allTextFileNameList if re.match( self.textFileNamePattern, fileName ) ]
 
-        #   Store the validated text file name list
-        self.textFileNameList = validTextFileNameList
+        #   Construct docId to text file name tuple list
+        self.docIdToTextFileNameTupleList = list(enumerate(validTextFileNameList))
 
-        #   For test
-        #self.textFileNameList = self.textFileNameList[0:10]
+    def writeDocIdIndex( self, docIdIndexDir : str, docIdIndexFileName : str, isUsePickle : Optional[bool] = True ):
+        ''' This function writes docId to text file name mapping dictionary
+        '''
+
+        assert( self.docIdToTextFileNameTupleList != None )
+
+        #   Construct docId index file path
+        docIdIndexFilePath = os.path.join( docIdIndexDir, docIdIndexFileName )
+
+        if isUsePickle:
+
+            #   Write index file
+            with open( docIdIndexFilePath, 'wb' ) as docIdIndexFile:
+                pickle.dump( self.docIdToTextFileNameTupleList, docIdIndexFile )
+
+        else:
+
+            #   Write index file
+            with open( docIdIndexFilePath, 'w', encoding='utf-8' ) as docIdIndexFile:
+                docIdIndexFile.write( repr(self.docIdToTextFileNameTupleList) )
 
     def writeIntermediateIndex( self, intermediateIndexDir : str,
                                         intermediateIndexFileNameFormat : Optional[str] = IntermediateIndexFileNameFormat,
@@ -89,13 +108,13 @@ class TextProcessor(object):
         outputQueue = manager.Queue()
 
         #   Split text file name list into small chunks by number of processes
-        chunkSize, textFileNameListChunk = chunkify( self.textFileNameList, numProcess )
+        docIdToTextFileNameTupleListChunk = chunkify( self.docIdToTextFileNameTupleList, numProcess )
 
         #   Begin timer
         startTime = time.time()
 
         #   Construct processes to construct intermediate index
-        processList = [ multiprocessing.Process( target=self.constructIntermediateIndex, args=( textFileNameList, outputQueue, chunkSize, i ) ) for i, textFileNameList in enumerate(textFileNameListChunk) ]
+        processList = [ multiprocessing.Process( target=self.constructIntermediateIndex, args=( docIdToTextFileNameTupleList, outputQueue, i ) ) for i, docIdToTextFileNameTupleList in enumerate(docIdToTextFileNameTupleListChunk) ]
 
         #   Start process
         for process in processList:
@@ -119,7 +138,7 @@ class TextProcessor(object):
             with open( os.path.join( intermediateIndexDir, intermediateIndexFileNameFormat.format(**{'id':i}) ), 'w', encoding='utf-8' ) as indexFile:
                 indexFile.write( repr(result) )
 
-    def constructIntermediateIndex( self, textFileNameList, outputQueue, chunkSize=1, processId=0 ):
+    def constructIntermediateIndex( self, docIdToTextFileNameTupleList, outputQueue, processId=0 ):
         ''' This function constructs an intermediated index which represents
             a term to document id to term frequency mapping dictionary.
             The index should be in this following format:
@@ -143,12 +162,12 @@ class TextProcessor(object):
         termToDocIdToTermFrequencyDict = dict()
 
         #   Get number of text file name list
-        numTextFileNameList = len(textFileNameList)
+        numTextFile = len(docIdToTextFileNameTupleList)
 
-        #   For each docId, textFileName enumerate( textFileNameList )
-        for docId, textFileName in enumerate( textFileNameList ):
+        #   For each docId and textFileName
+        for docNum, (docId, textFileName) in enumerate( docIdToTextFileNameTupleList ):
 
-            print('[CPU #{}] Now processing {}. ({}/{})'.format(processId, textFileName, docId+1, numTextFileNameList))
+            print('[CPU #{}] Now processing {}. ({}/{})'.format(processId, textFileName, docNum+1, numTextFile))
 
             #   Open text file from text file directory
             with open( os.path.join( self.textFileDir, textFileName ), encoding='utf-8' ) as textFile:
@@ -170,8 +189,8 @@ class TextProcessor(object):
                     termToDocIdToTermFrequencyDict[token] = dict()
 
                 #   Assign offset document id and term frequency
-                termToDocIdToTermFrequencyDict[token][docId + (processId*chunkSize)] = tokenList.count(token)
+                termToDocIdToTermFrequencyDict[token][docId] = tokenList.count(token)
 
-            print('[CPU #{}] Done processing {}. ({}/{})'.format(processId, textFileName, docId+1, numTextFileNameList))
+            print('[CPU #{}] Done processing {}. ({}/{})'.format(processId, textFileName, docNum+1, numTextFile))
 
         outputQueue.put( termToDocIdToTermFrequencyDict )

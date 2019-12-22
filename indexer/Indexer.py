@@ -40,6 +40,21 @@ def mergeIntermediateIndex( intermediateIndexList : List ) -> Dict:
 
     return mergedIntermediateIndex
 
+def normalizeInvertedIndex( invertedIndex : Dict ) -> Dict:
+    ''' This function normalizes each document vector in tf-idf weighted
+        inverted index
+    '''
+
+    for docId, termToWeightedTfIdfDict in invertedIndex.items():
+
+        #   Compute document vector size
+        docVectorSize = math.sqrt(sum([ weightedTfIdf**2 for weightedTfIdf in termToWeightedTfIdfDict.values()]))
+
+        #   Normalize each weighted td-idf with document vector size
+        invertedIndex[docId] = { term: weightedTfIdf/docVectorSize for term, weightedTfIdf in termToWeightedTfIdfDict.items() }
+
+    return invertedIndex
+
 ##########################################################################
 #   CLASS
 ##########################################################################
@@ -49,6 +64,31 @@ class Indexer(object):
     def __init__(self):
         self.index = None
         self.invertedIndex = None
+        self.docIdIndex = None
+
+    def readFromDocIdIndexDir( self, docIdIndexDir : str, docIdIndexFileName : str, isUsePickle : Optional[bool] = True ):
+        ''' This function reads docId index from index directory
+        '''
+
+        #   Construct docId index file path
+        docIdIndexFilePath = os.path.join( docIdIndexDir, docIdIndexFileName )
+
+        #   Check if index file path exists
+        if not os.path.exists( docIdIndexFilePath ):
+            raise ValueError('readFromDocIdIndexDir() - Cannot find docId index file at {}.'.format(docIdIndexFilePath))
+
+        if isUsePickle:
+
+            #   Read index file
+            with open( docIdIndexFilePath, 'rb' ) as docIdIndexFile:
+                self.docIdIndex = dict(pickle.load( docIdIndexFile ))
+
+        else:
+
+            #   Read index file
+            with open( docIdIndexFilePath, 'r', encoding='utf-8' ) as docIdIndexFile:
+                serializedDocIdIndexStr = docIdIndexFile.read()
+                self.docIdIndex = dict(ast.literal_eval( serializedDocIdIndexStr ))
 
     def readFromIntermediateIndexDir( self, intermediateIndexDir : str, intermediateIndexFileNameFormat : Optional[str] = IntermediateIndexFileNameFormat ):
         ''' This function reads intermediate index from given directory and file name format then
@@ -147,19 +187,27 @@ class Indexer(object):
             for docId, termFreq in docIdToTermFreqDict.items():
                 self.index[term][docId] = math.log10( 1 + termFreq )*math.log10( docFreq )
 
-    def constructInvertedIndexTfIdf( self, numDoc : int ):
+    def constructInvertedIndexTfIdf( self, docIdList : List[int] ):
         ''' This function constructs inverted index of the index
         '''
 
         assert( self.index != None )
 
         #   Initialize inverted index
-        self.invertedIndex = { docId : dict() for docId in range(numDoc) }
+        self.invertedIndex = { docId : dict() for docId in docIdList }
 
         #   Invert term and docId indexing structure
         for term, docIdToWeightedTfIdfDict in self.index.items():
             for docId, weightedTfIdf in docIdToWeightedTfIdfDict.items():
                 self.invertedIndex[docId][term] = weightedTfIdf
+
+    def normalizeInvertedIndexTfIdf( self ):
+        ''' This function normalizes inverted index
+        '''
+
+        assert( self.invertedIndex != None )
+
+        self.invertedIndex = normalizeInvertedIndex( self.invertedIndex )
 
     def writeIndex( self, indexDir : str, indexFileName : str, isUsePickle : Optional[bool] = True ):
         ''' This function writes index file at given path
@@ -202,3 +250,11 @@ class Indexer(object):
             #   Write index file
             with open( invertedIndexFilePath, 'w', encoding='utf-8' ) as invertedIndexFile:
                 invertedIndexFile.write( repr(self.invertedIndex) )
+
+    def getDocNameById( self, docId : int ) -> str:
+        ''' This function maps docId for document name
+        '''
+
+        assert( self.docIdIndex != None )
+
+        return self.docIdIndex[ docId ]
