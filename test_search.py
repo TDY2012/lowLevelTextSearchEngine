@@ -7,6 +7,7 @@
 import sys
 from optparse import OptionParser
 from indexer.Indexer import Indexer
+from querymanager.QueryManager import QueryManager
 
 ##########################################################################
 #   GLOBAL
@@ -14,7 +15,9 @@ from indexer.Indexer import Indexer
 
 NumRequiredArgs = 1
 IndexDir = 'index'
-IndexFileName = 'index.txt'
+IndexFileName = 'index.pickle'
+InvertedIndexDir = 'index'
+InvertedIndexFileName = 'inverted_index.pickle'
 
 ##########################################################################
 #   HELPER
@@ -43,9 +46,9 @@ def main():
 
     indexer = Indexer()
 
-    indexer.readFromIndexDir( IndexDir, IndexFileName )
+    indexer.readFromInvertedIndexDir( InvertedIndexDir, InvertedIndexFileName )
 
-    
+    print(indexer.invertedIndex)
 
 ##########################################################################
 #   RUN

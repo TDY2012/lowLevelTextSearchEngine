@@ -19,7 +19,13 @@ from indexer.Indexer import Indexer
 
 NumRequiredArgs = 0
 
-TextFileDir = '../dataset/Gutenberg/txt'
+#TextFileDir = '../dataset/Gutenberg/txt'
+TextFileDir = '../dataset/Gutenberg/sample'
+
+IndexDir = 'index'
+IndexFileName = 'index.pickle'
+InvertedIndexFileName = 'inverted_index.pickle'
+IntermediateIndexDir = 'intermediate_index'
 
 ##########################################################################
 #   HELPER
@@ -50,23 +56,28 @@ def main():
                                     normalizerOption=NormalizerOption.REMOVE_PUNCTUATION | NormalizerOption.CASE_FOLDING )
 
     #   Construct intermediate index
-    #textProcessor.writeIntermediateIndex('intermediate_index')
+    textProcessor.writeIntermediateIndex( IntermediateIndexDir )
 
+    #   Get number of documents
     numDoc = len( textProcessor.textFileNameList )
 
+    #   Construct indexer
     indexer = Indexer()
 
-    # indexer.readFromIntermediateIndexDir( 'intermediate_index' )
+    #   Read intermediate index
+    indexer.readFromIntermediateIndexDir( IntermediateIndexDir )
 
-    # indexer.convertIndexToTfIdf( numDoc )
+    #   Convert index to tf-idf weighted
+    indexer.convertIndexToTfIdf( numDoc )
 
-    # indexer.writeIndex( 'index', 'index.txt' )
+    #   Write to file
+    indexer.writeIndex( IndexDir, IndexFileName )
 
-    indexer.readFromIndexDir( 'index', 'index.txt' )
-
+    #   Construct inverted index
     indexer.constructInvertedIndexTfIdf( numDoc )
 
-    indexer.writeInvertedIndex( 'index', 'inverted_index.txt' )
+    #   Write to file
+    indexer.writeInvertedIndex( IndexDir, InvertedIndexFileName )
 
 ##########################################################################
 #   RUN

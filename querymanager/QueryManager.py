@@ -42,3 +42,4 @@ class QueryManager(object):
         queryTermList = Normalizer.normalizeTokenList( queryTermList, isRemovePunctuation=normalizerOption & NormalizerOption.REMOVE_PUNCTUATION,
                                                                         isCaseFolding=normalizerOption & NormalizerOption.CASE_FOLDING )
 
+        print(queryTermList)

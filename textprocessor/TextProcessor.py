@@ -27,7 +27,7 @@ NumProcess = 8
 ##########################################################################
 
 def chunkify( l, n ):
-    return [ [ l[i] for i in range(j*(len(l)//n),(j+1)*(len(l)//n)) ] for j in range(n-1) ] + [ l[ (n-1)*(len(l)//n): ] ]
+    return (len(l)//n), [ [ l[i] for i in range(j*(len(l)//n),(j+1)*(len(l)//n)) ] for j in range(n-1) ] + [ l[ (n-1)*(len(l)//n): ] ]
 
 ##########################################################################
 #   CLASS
@@ -89,13 +89,13 @@ class TextProcessor(object):
         outputQueue = manager.Queue()
 
         #   Split text file name list into small chunks by number of processes
-        textFileNameListChunk = chunkify( self.textFileNameList, numProcess )
+        chunkSize, textFileNameListChunk = chunkify( self.textFileNameList, numProcess )
 
         #   Begin timer
         startTime = time.time()
 
         #   Construct processes to construct intermediate index
-        processList = [ multiprocessing.Process( target=self.constructIntermediateIndex, args=( textFileNameList, outputQueue, i ) ) for i, textFileNameList in enumerate(textFileNameListChunk) ]
+        processList = [ multiprocessing.Process( target=self.constructIntermediateIndex, args=( textFileNameList, outputQueue, chunkSize, i ) ) for i, textFileNameList in enumerate(textFileNameListChunk) ]
 
         #   Start process
         for process in processList:
@@ -119,7 +119,7 @@ class TextProcessor(object):
             with open( os.path.join( intermediateIndexDir, intermediateIndexFileNameFormat.format(**{'id':i}) ), 'w', encoding='utf-8' ) as indexFile:
                 indexFile.write( repr(result) )
 
-    def constructIntermediateIndex( self, textFileNameList, outputQueue, processId=0 ):
+    def constructIntermediateIndex( self, textFileNameList, outputQueue, chunkSize=1, processId=0 ):
         ''' This function constructs an intermediated index which represents
             a term to document id to term frequency mapping dictionary.
             The index should be in this following format:
@@ -148,7 +148,7 @@ class TextProcessor(object):
         #   For each docId, textFileName enumerate( textFileNameList )
         for docId, textFileName in enumerate( textFileNameList ):
 
-            print('[{}] Now processing {}. ({}/{})'.format(processId, textFileName, docId+1, numTextFileNameList))
+            print('[CPU #{}] Now processing {}. ({}/{})'.format(processId, textFileName, docId+1, numTextFileNameList))
 
             #   Open text file from text file directory
             with open( os.path.join( self.textFileDir, textFileName ), encoding='utf-8' ) as textFile:
@@ -169,9 +169,9 @@ class TextProcessor(object):
                 if token not in termToDocIdToTermFrequencyDict:
                     termToDocIdToTermFrequencyDict[token] = dict()
 
-                #   Assign document id and term frequency
-                termToDocIdToTermFrequencyDict[token][docId] = tokenList.count(token)
+                #   Assign offset document id and term frequency
+                termToDocIdToTermFrequencyDict[token][docId + (processId*chunkSize)] = tokenList.count(token)
 
-            print('[{}] Done processing {}. ({}/{})'.format(processId, textFileName, docId+1, numTextFileNameList))
+            print('[CPU #{}] Done processing {}. ({}/{})'.format(processId, textFileName, docId+1, numTextFileNameList))
 
         outputQueue.put( termToDocIdToTermFrequencyDict )

@@ -6,6 +6,7 @@ import os
 import re
 import ast
 import math
+import pickle
 from typing import Optional, List, Dict
 from textprocessor.TextProcessor import IntermediateIndexFileNameFormat
 
@@ -82,7 +83,7 @@ class Indexer(object):
         #   Merge intermediate indices
         self.index = mergeIntermediateIndex( intermediateIndexList )
 
-    def readFromIndexDir( self, indexDir : str, indexFileName : str ):
+    def readFromIndexDir( self, indexDir : str, indexFileName : str, isUsePickle : Optional[bool] = True ):
         ''' This function reads index from index directory
         '''
 
@@ -93,12 +94,42 @@ class Indexer(object):
         if not os.path.exists( indexFilePath ):
             raise ValueError('readFromIndexDir() - Cannot find index file at {}.'.format(indexFilePath))
 
-        #   Read index file
-        with open( indexFilePath, 'r', encoding='utf-8' ) as indexFile:
-            serializedIndexStr = indexFile.read()
+        if isUsePickle:
 
-        #   Parse read serialized string as dictionary
-        self.index = ast.literal_eval( serializedIndexStr )
+            #   Read index file
+            with open( indexFilePath, 'rb' ) as indexFile:
+                self.index = pickle.load( indexFile )
+
+        else:
+
+            #   Read index file
+            with open( indexFilePath, 'r', encoding='utf-8' ) as indexFile:
+                serializedIndexStr = indexFile.read()
+                self.index = ast.literal_eval( serializedIndexStr )
+
+    def readFromInvertedIndexDir( self, invertedIndexDir : str, invertedIndexFileName : str, isUsePickle : Optional[bool] = True ):
+        ''' This function reads inverted index from index directory
+        '''
+
+        #   Construct inverted index file path
+        invertedIndexFilePath = os.path.join( invertedIndexDir, invertedIndexFileName )
+
+        #   Check if inverted index file path exists
+        if not os.path.exists( invertedIndexFilePath ):
+            raise ValueError('readFromIndexDir() - Cannot find inverted index file at {}.'.format(invertedIndexFilePath))
+
+        if isUsePickle:
+
+            #   Read inverted index file
+            with open( invertedIndexFilePath, 'rb' ) as invertedIndexFile:
+                self.invertedIndex = pickle.load( invertedIndexFile )
+
+        else:
+
+            #   Read inverted index file
+            with open( invertedIndexFilePath, 'r', encoding='utf-8' ) as invertedIndexFile:
+                serializedInvertedIndexStr = invertedIndexFile.read()
+                self.invertedIndex = ast.literal_eval( serializedInvertedIndexStr )
 
     def convertIndexToTfIdf( self, numDoc : int ):
         ''' This function converts index in form of just term frequency to
@@ -122,15 +153,15 @@ class Indexer(object):
 
         assert( self.index != None )
 
+        #   Initialize inverted index
         self.invertedIndex = { docId : dict() for docId in range(numDoc) }
 
+        #   Invert term and docId indexing structure
         for term, docIdToWeightedTfIdfDict in self.index.items():
-
             for docId, weightedTfIdf in docIdToWeightedTfIdfDict.items():
-
                 self.invertedIndex[docId][term] = weightedTfIdf
 
-    def writeIndex( self, indexDir : str, indexFileName : str ):
+    def writeIndex( self, indexDir : str, indexFileName : str, isUsePickle : Optional[bool] = True ):
         ''' This function writes index file at given path
         '''
 
@@ -139,11 +170,19 @@ class Indexer(object):
         #   Construct index file path
         indexFilePath = os.path.join( indexDir, indexFileName )
 
-        #   Write index file
-        with open( indexFilePath, 'w', encoding='utf-8' ) as indexFile:
-            indexFile.write( repr(self.index) )
+        if isUsePickle:
 
-    def writeInvertedIndex( self, invertedIndexDir : str, invertedIndexFileName : str ):
+            #   Write index file
+            with open( indexFilePath, 'wb' ) as indexFile:
+                pickle.dump( self.index, indexFile )
+
+        else:
+
+            #   Write index file
+            with open( indexFilePath, 'w', encoding='utf-8' ) as indexFile:
+                indexFile.write( repr(self.index) )
+
+    def writeInvertedIndex( self, invertedIndexDir : str, invertedIndexFileName : str, isUsePickle : Optional[bool] = True ):
         ''' This function writes inverted index file at given path
         '''
 
@@ -152,6 +191,14 @@ class Indexer(object):
         #   Construct inverted index file path
         invertedIndexFilePath = os.path.join( invertedIndexDir, invertedIndexFileName )
 
-        #   Write index file
-        with open( invertedIndexFilePath, 'w', encoding='utf-8' ) as invertedIndexFile:
-            invertedIndexFile.write( repr(self.invertedIndex) )
+        if isUsePickle:
+
+            #   Write index file
+            with open( invertedIndexFilePath, 'wb' ) as invertedIndexFile:
+                pickle.dump( self.invertedIndex, invertedIndexFile )
+
+        else:
+
+            #   Write index file
+            with open( invertedIndexFilePath, 'w', encoding='utf-8' ) as invertedIndexFile:
+                invertedIndexFile.write( repr(self.invertedIndex) )
